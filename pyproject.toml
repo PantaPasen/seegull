@@ -20,8 +20,10 @@ license = {text = "MIT license"}
 dependencies = [
   "autodistill>=0.1.26",
   "autodistill-grounding-dino>=0.1.3",
+  "datasets",
   "google-cloud-storage",
   "pillow_heif>=0.15.0",
+  "roboflow",
   "tensorflow",
   "ultralytics",
   "ultralytics_bower @ git+https://git@github.com/PantaPasen/ultralytics.git",
