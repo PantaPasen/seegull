@@ -22,7 +22,7 @@ from autodistill.detection import CaptionOntology, DetectionBaseModel
 from datasets import Dataset, load_metric
 from sklearn.neighbors import NearestNeighbors
 from sklearn.utils.extmath import weighted_mode
-from tqdm.notebook import tqdm
+from tqdm.auto import tqdm
 from transformers import (
     AutoImageProcessor,
     Dinov2ForImageClassification,
@@ -313,7 +313,7 @@ class KNNSearch:
         self,
         dino_model: DINOv2,
         df: pd.DataFrame,
-        embeddings_col: str | None = None,
+        embeddings_col: str = "embeddings",
         image_col: str | None = None,
         n_neighbors: int = 10,
         max_distance: float | None = None,
@@ -336,8 +336,7 @@ class KNNSearch:
         self.dino_model = dino_model
         self.df = df.reset_index(drop=True)
 
-        if embeddings_col is None:
-            embeddings_col = "embeddings"
+        if embeddings_col not in self.df.columns:
             self.df[embeddings_col] = self.dino_model.embeddings(
                 self.df[image_col].tolist()
             )
@@ -400,8 +399,8 @@ class KNNSearch:
     def predict(
         self,
         df: pd.DataFrame,
-        embeddings_col: str,
         target_cols: str | Sequence[str],
+        embeddings_col: str = "embeddings",
         index_col: str | None = None,
         weighted: bool = True,
     ) -> pd.DataFrame:
@@ -494,7 +493,6 @@ class KNNSearch:
     def evaluate_predict(
         self,
         df: pd.DataFrame,
-        embeddings_col: str,
         target_cols: str | Sequence[str],
         prefix: str = "",
         **kwargs,
@@ -516,10 +514,10 @@ class KNNSearch:
         if prefix and not prefix.endswith("_"):
             prefix = prefix + "_"
 
-        predictions = self.predict(df, embeddings_col, target_cols, **kwargs)
+        predictions = self.predict(df, target_cols, **kwargs)
 
         for col in target_cols:
-            df[f"{prefix}{col}"] = predictions[col]
+            df[f"{prefix}{col}_pred"] = predictions[col]
             df[f"{prefix}{col}_conf"] = predictions[f"{col}_conf"]
             df[f"{prefix}{col}_correct"] = df[col] == predictions[col]
 
@@ -673,7 +671,7 @@ class DINOv2TF(DINOv2Base):
         images = self.load_images(df)
 
         for image in tqdm(images):
-            try:
+            if image is not None:
                 embeddings.append(
                     self.signature(image=tf.reverse(image.image, axis=[2]))[
                         "embedding"
@@ -681,7 +679,7 @@ class DINOv2TF(DINOv2Base):
                     .numpy()
                     .tolist()
                 )
-            except:
+            else:
                 embeddings.append(None)
 
         return embeddings

@@ -24,6 +24,7 @@ from supervision.annotators.base import BaseAnnotator
 from tqdm.contrib.concurrent import process_map
 from typing_extensions import Self
 
+from seegull.models.dino import AutodistillModelWrapper
 from seegull.models.yolo import YOLO, YOLOMultiLabel
 
 # from bower_ml.models.autodistill import AutodistillModelWrapper
@@ -180,8 +181,6 @@ class Image:
         Saves the prediction as an `supervision.Detections` object on this
         Image instance.
 
-        TODO: Implment DINO
-
         Args:
             model: The object detection model to use
             conf: The confidence threshold for a prediction
@@ -209,9 +208,9 @@ class Image:
         # elif isinstance(model, DetectionBaseModel):
         #     classes = model.ontology.classes()
         #     self.sv_detection = model.predict(self.image)
-        # elif isinstance(model, AutodistillModelWrapper):
-        #     classes = model.classes
-        #     self.sv_detection = model.predict(self, conf=conf)
+        elif isinstance(model, AutodistillModelWrapper):
+            classes = model.classes
+            self.sv_detection = model.predict(self, conf=conf)
         else:
             raise NotImplementedError(f"Model {model} is not supported.")
 
@@ -278,7 +277,7 @@ class Image:
 
         labels = rows[label_col].tolist()
         unique_labels = list(set(labels))
-        class_ids = np.array([unique_labels.index(l) for l in labels])
+        class_ids = np.array([unique_labels.index(label) for label in labels])
 
         # Get bounding box
         xyxy = rows[["x1", "y1", "x2", "y2"]].values

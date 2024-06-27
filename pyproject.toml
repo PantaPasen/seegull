@@ -24,6 +24,7 @@ dependencies = [
   "google-cloud-storage",
   "pillow_heif>=0.15.0",
   "roboflow",
+  "scikit-learn",
   "tensorflow",
   "ultralytics",
   "ultralytics_bower @ git+https://git@github.com/PantaPasen/ultralytics.git",
