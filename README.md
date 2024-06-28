@@ -27,4 +27,6 @@ image = Image(url="...")
 image.predict(model).annotate().display()
 ```
 
+![example annotation of a metal can](docs/example_annotation.png)
+
 See the [notebooks](notebooks) folder for more thorough examples of how to use seegull.
