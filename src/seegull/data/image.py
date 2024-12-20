@@ -38,10 +38,67 @@ PIL.ImageFile.LOAD_TRUNCATED_IMAGES = True
 class Image:
     """A class for (down)loading, mainpulating and predicting on images."""
 
+    #def __init__(
+    #    self,
+    #    path: Path | str = None,
+    #    image: np.ndarray = None,
+    #    url: str = None,
+    #    low_memory: bool = False,
+    #    force_redownload: bool = False,
+    #    file_extension: str = None,
+    #    **kwargs,
+    #):
+    #    """
+    #    Args:
+    #        path: The local path to either where the file is stored or where
+    #            it should be downloaded to. If None, a temporary file will be
+    #            used instead.
+    #        image: The image pixels as a uint8 numpy array with shape
+    #            [height, width, 3]. The array should be in BGR format.
+    #        url: A remote path to the file. If provided, the image will be
+    #            downloaded during initialization of `Image`.
+    #            Supported protocals are:
+    #                http(s)://, gs:// (Google Storage)
+    #        low_memory: If this is True the raw pixels won't be kept in
+    #            memory. Otherwise the pixels will be stored at `self.image`
+    #            after the first load.
+    #        force_redownload: If True, redownload the image from `url` even
+    #            even if it already exists at `path`.
+    #        file_extension: If either path or url is given, file_extension
+    #            will be overwritten by the inferred value. This is useful when
+    #            Image is initialized from `image` pixels.
+#
+    #    Raises:
+    #        ValueError: If none of `path`, `url` or `image` are provided.
+    #    """
+    #    self._path = Path(path) if path else path
+    #    self._image = image
+    #    self.url = url
+    #    self.low_memory = low_memory
+    #    
+#
+    #    # Try to infer the file extension
+    #    self.file_extension = file_extension
+    #    if self._path:
+    #        self.file_extension = self._path.suffix.removeprefix(".")
+    #    elif self.url:
+    #        filename = self.url.split("/")[-1]
+    #        self.file_extension = filename.split(".")[-1]
+#
+    #    if (
+    #        (not self.path_exists())
+    #        and self._image is None
+    #        and self.url is None
+    #    ):
+    #        raise ValueError("One of path, image or url must be set")
+#
+    #    self.download(force=force_redownload)
+    
     def __init__(
         self,
         path: Path | str = None,
         image: np.ndarray = None,
+        pil_image: PIL.Image.Image = None,
         url: str = None,
         low_memory: bool = False,
         force_redownload: bool = False,
@@ -55,26 +112,31 @@ class Image:
                 used instead.
             image: The image pixels as a uint8 numpy array with shape
                 [height, width, 3]. The array should be in BGR format.
+            pil_image: A PIL.Image object to initialize the image.
             url: A remote path to the file. If provided, the image will be
                 downloaded during initialization of `Image`.
-                Supported protocals are:
+                Supported protocols are:
                     http(s)://, gs:// (Google Storage)
-            low_memory: If this is True the raw pixels won't be kept in
-                memory. Otherwise the pixels will be stored at `self.image`
+            low_memory: If this is True, the raw pixels won't be kept in
+                memory. Otherwise, the pixels will be stored at `self.image`
                 after the first load.
             force_redownload: If True, redownload the image from `url` even
-                even if it already exists at `path`.
+                if it already exists at `path`.
             file_extension: If either path or url is given, file_extension
                 will be overwritten by the inferred value. This is useful when
-                Image is initialized from `image` pixels.
+                Image is initialized from `image` pixels or PIL.Image.
 
         Raises:
-            ValueError: If none of `path`, `url` or `image` are provided.
+            ValueError: If none of `path`, `url`, `image`, or `pil_image` are provided.
         """
         self._path = Path(path) if path else path
         self._image = image
         self.url = url
         self.low_memory = low_memory
+
+        # Convert PIL.Image to numpy array if provided
+        if pil_image:
+            self._image = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
 
         # Try to infer the file extension
         self.file_extension = file_extension
@@ -89,7 +151,7 @@ class Image:
             and self._image is None
             and self.url is None
         ):
-            raise ValueError("One of path, image or url must be set")
+            raise ValueError("One of path, image, url, or pil_image must be set")
 
         self.download(force=force_redownload)
 
@@ -273,7 +335,7 @@ class Image:
 
         # Set up the labels and mapping of labels to IDs
         if isinstance(label_col, list):
-            rows["label"] = rows[label_col].apply(lambda r: "+".join(r), axis=1)
+            rows["label"] = rows[label_col].apply(lambda r: "+".join(r.dropna()) if r.notna().any() else "Unknown", axis=1)
             label_col = "label"
 
         labels = rows[label_col].tolist()
@@ -612,6 +674,53 @@ def get_image_df(
 
     return image_df
 
+def process_row(row, image_column="image", **kwargs):
+    """Process a single row to convert an image column to an `Image` instance.
+
+    Args:
+        row: A single row of the DataFrame.
+        image_column: The column containing the image.
+        **kwargs: Additional arguments passed to the `Image` class.
+
+    Returns:
+        An `Image` instance.
+    """
+    if isinstance(row[image_column], PIL.Image.Image):
+        return Image(pil_image=row[image_column], **kwargs)
+    return load_image(row, **kwargs)
+
+def load_images_from_df(
+    df: pd.DataFrame,
+    max_workers: int | None = None,
+    image_column: str = "image",
+    **kwargs,
+) -> pd.DataFrame:
+    """Load and process the images in a DataFrame.
+
+    If the DataFrame contains an 'image' column with PIL.Image objects, 
+    convert them into `Image` instances.
+
+    Args:
+        df: The DataFrame to process.
+        max_workers: The number of concurrent workers to use.
+        image_column: The column containing PIL.Image objects.
+        **kwargs: Additional arguments passed to the `Image` class.
+
+    Returns:
+        A DataFrame with an updated `image` column containing `Image` instances.
+    """
+    
+    df["image"] = process_map(
+        partial(
+            process_row,
+            **kwargs,
+        ),
+        [row for _, row in df.iterrows()],
+        desc="Processing images",
+        max_workers=max_workers,
+    )
+
+    return df
 
 def display_image_df(df: pd.DataFrame, print_cols=None):
     """Display the images in a DataFrame."""

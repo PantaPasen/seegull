@@ -20,6 +20,11 @@ Once published, you can install Seegull via pip:
 pip install seegull
 ```
 
+Untill it has beens published to PyPI we recommend installing with:
+```bash
+pip install .
+```
+in the root folder of the repo.
 ---
 
 ## **Usage**
