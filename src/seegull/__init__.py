@@ -6,7 +6,7 @@ __version__ = "0.1.0"
 
 from seegull.data import image
 
-from seegull.data.image import Image, get_image_df, load_image, load_images, load_images_from_df
+from seegull.data.image import Image, get_image_df, load_image, load_images
 from seegull.models import dino, yolo
 from seegull.models.dino import DINOv2, DINOv2TF, GroundingDINO
 
@@ -21,7 +21,6 @@ __all__ = [
     "yolo",
     "Image",
     "get_image_df",
-    "load_images_from_df",
     "load_image",
     "load_images",
     "DINOv2",

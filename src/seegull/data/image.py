@@ -24,7 +24,6 @@ from supervision.annotators.base import BaseAnnotator
 from tqdm.contrib.concurrent import process_map
 from typing_extensions import Self
 
-from seegull.models.dino import AutodistillModelWrapper
 from seegull.models.yolo import YOLO, YOLOMultiLabel
 
 # from bower_ml.models.autodistill import AutodistillModelWrapper
@@ -38,62 +37,6 @@ PIL.ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 class Image:
     """A class for (down)loading, mainpulating and predicting on images."""
-
-    #def __init__(
-    #    self,
-    #    path: Path | str = None,
-    #    image: np.ndarray = None,
-    #    url: str = None,
-    #    low_memory: bool = False,
-    #    force_redownload: bool = False,
-    #    file_extension: str = None,
-    #    **kwargs,
-    #):
-    #    """
-    #    Args:
-    #        path: The local path to either where the file is stored or where
-    #            it should be downloaded to. If None, a temporary file will be
-    #            used instead.
-    #        image: The image pixels as a uint8 numpy array with shape
-    #            [height, width, 3]. The array should be in BGR format.
-    #        url: A remote path to the file. If provided, the image will be
-    #            downloaded during initialization of `Image`.
-    #            Supported protocals are:
-    #                http(s)://, gs:// (Google Storage)
-    #        low_memory: If this is True the raw pixels won't be kept in
-    #            memory. Otherwise the pixels will be stored at `self.image`
-    #            after the first load.
-    #        force_redownload: If True, redownload the image from `url` even
-    #            even if it already exists at `path`.
-    #        file_extension: If either path or url is given, file_extension
-    #            will be overwritten by the inferred value. This is useful when
-    #            Image is initialized from `image` pixels.
-#
-    #    Raises:
-    #        ValueError: If none of `path`, `url` or `image` are provided.
-    #    """
-    #    self._path = Path(path) if path else path
-    #    self._image = image
-    #    self.url = url
-    #    self.low_memory = low_memory
-    #    
-#
-    #    # Try to infer the file extension
-    #    self.file_extension = file_extension
-    #    if self._path:
-    #        self.file_extension = self._path.suffix.removeprefix(".")
-    #    elif self.url:
-    #        filename = self.url.split("/")[-1]
-    #        self.file_extension = filename.split(".")[-1]
-#
-    #    if (
-    #        (not self.path_exists())
-    #        and self._image is None
-    #        and self.url is None
-    #    ):
-    #        raise ValueError("One of path, image or url must be set")
-#
-    #    self.download(force=force_redownload)
     
     def __init__(
         self,
@@ -246,6 +189,8 @@ class Image:
         Saves the prediction as an `supervision.Detections` object on this
         Image instance.
 
+        TODO: Implment DINO
+
         Args:
             model: The object detection model to use
             conf: The confidence threshold for a prediction
@@ -273,9 +218,9 @@ class Image:
         # elif isinstance(model, DetectionBaseModel):
         #     classes = model.ontology.classes()
         #     self.sv_detection = model.predict(self.image)
-        elif isinstance(model, AutodistillModelWrapper):
-            classes = model.classes
-            self.sv_detection = model.predict(self, conf=conf)
+        # elif isinstance(model, AutodistillModelWrapper):
+        #     classes = model.classes
+        #     self.sv_detection = model.predict(self, conf=conf)
         else:
             raise NotImplementedError(f"Model {model} is not supported.")
 
@@ -342,7 +287,7 @@ class Image:
 
         labels = rows[label_col].tolist()
         unique_labels = list(set(labels))
-        class_ids = np.array([unique_labels.index(label) for label in labels])
+        class_ids = np.array([unique_labels.index(l) for l in labels])
 
         # Get bounding box
         xyxy = rows[["x1", "y1", "x2", "y2"]].values
@@ -608,21 +553,7 @@ def load_image(
     else:
         raise NotImplementedError(f"Unknown return type: {return_type}")
 
-def process_row(row, image_column="image", **kwargs):
-    """Process a single row to convert an image column to an `Image` instance.
 
-    Args:
-        row: A single row of the DataFrame.
-        image_column: The column containing the image.
-        **kwargs: Additional arguments passed to the `Image` class.
-
-    Returns:
-        An `Image` instance.
-    """
-    if image_column in row:
-        if isinstance(row[image_column], PIL.Image.Image):
-            return Image(pil_image=row[image_column], **kwargs)
-    return load_image(row, **kwargs)
 
 def load_images(
     df: pd.DataFrame,
@@ -641,7 +572,7 @@ def load_images(
     """
     images = process_map(
         partial(
-            process_row,
+            load_image,
             **kwargs,
         ),
         [row for _, row in df.iterrows()],
@@ -708,48 +639,6 @@ def get_image_df(
 
     return image_df
 
-
-
-def load_images_from_df(
-    df: pd.DataFrame,
-    max_workers: int | None = None,
-    image_column: str = "image",
-    **kwargs,
-) -> pd.DataFrame:
-    """Load and process the images in a DataFrame.
-
-    If the DataFrame contains an 'image' column with PIL.Image objects, 
-    convert them into `Image` instances.
-
-    Args:
-        df: The DataFrame to process.
-        max_workers: The number of concurrent workers to use.
-        image_column: The column containing PIL.Image objects.
-        **kwargs: Additional arguments passed to the `Image` class.
-
-    Returns:
-        A DataFrame with an updated `image` column containing `Image` instances.
-    """
-    # If the images are PIL images process them, otherwise return df
-    if isinstance(df[image_column].iloc[0], PIL.Image.Image):
-        df[image_column] = process_map(
-            partial(
-                process_row,
-                **kwargs,
-            ),
-            [row for _, row in df.iterrows()],
-            desc="Processing images",
-            max_workers=max_workers,
-        )
-
-    # Get the path if no path was provided (if temporary paths were generated)
-    if "path" not in df.columns:
-        df["path"] = df["image"].apply(lambda im: im.path)
-
-    # Mark whether each image exists
-    df["exists"] = df["path"].apply(lambda p: p.exists())
-    
-    return df
 
 def display_image_df(df: pd.DataFrame, print_cols=None):
     """Display the images in a DataFrame."""
