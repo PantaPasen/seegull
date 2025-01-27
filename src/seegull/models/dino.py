@@ -19,7 +19,8 @@ import supervision as sv
 import tensorflow as tf
 import torch
 from autodistill.detection import CaptionOntology, DetectionBaseModel
-from datasets import Dataset, load_metric
+from datasets import Dataset
+import evaluate
 from sklearn.neighbors import NearestNeighbors
 from sklearn.utils.extmath import weighted_mode
 from tqdm.auto import tqdm
@@ -256,7 +257,7 @@ class DINOv2(DINOv2Base):
                 "labels": torch.tensor([label2id[x["target"]] for x in batch]),
             }
 
-        metric = load_metric("accuracy")
+        metric = evaluate.load("accuracy")
 
         def compute_metrics(p):
             return metric.compute(

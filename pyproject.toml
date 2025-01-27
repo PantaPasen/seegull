@@ -28,6 +28,7 @@ dependencies = [
   "tensorflow",
   "ultralytics",
   "ultralytics_bower @ git+https://git@github.com/PantaPasen/ultralytics.git",
+  "evaluate"
 ]
 
 [project.optional-dependencies]

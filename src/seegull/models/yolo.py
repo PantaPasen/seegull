@@ -242,7 +242,7 @@ class YOLO:
                 x1, y1, x2, y2
         """
         # Import here to avoid circular import
-        from seegull.data.image import get_image_df,load_images_from_df 
+        from seegull.data.image import get_image_df 
 
         if "image_source" in df.columns:
             image_df = get_image_df(df)
