@@ -243,11 +243,14 @@ class YOLO:
         """
         # Import here to avoid circular import
         from seegull.data.image import get_image_df,load_images_from_df 
-        if "image_source" in df.columns
-            image_df = get_image_df(df)
-        
 
+        if "image_source" in df.columns:
+            image_df = get_image_df(df)
+        else:
+            image_df = get_image_df(df,pre_loaded_images=True)
+        
         paths = image_df[image_df["exists"]]["path"].tolist()
+        
         dfs = []
 
         for paths_chunk in tqdm(
@@ -369,9 +372,11 @@ class YOLOMultiLabel(YOLO):
                 x1, y1, x2, y2
         """
         # Import here to avoid circular import
-        from seegull.data.image import get_image_df
-
-        image_df = get_image_df(df)
+        from seegull.data.image import get_image_df, load_images_from_df 
+        if "image_source" in df.columns:
+            image_df = get_image_df(df)
+        else:
+            image_df = load_images_from_df(df)
 
         paths = image_df[image_df["exists"]]["path"].tolist()
         dfs = []
@@ -562,6 +567,8 @@ class YOLOValidation:
             self._predictions_df = self.load_predictions_csv(predictions_csv)
         elif df is not None:
             self._predictions_df = self.generate_predictions(self.df)
+            #self._predictions_df = self.load_predictions_df(df)
+            
         else:
             raise ValueError(
                 "One of `val`, `predictions_csv` or `df` must be provided to YOLOValidation."
