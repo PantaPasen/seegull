@@ -12,5 +12,5 @@
             ]
         }
     },
-    "postStartCommand": "pip install -e .[dev]"
+    "postStartCommand": "pip install -e .[dev] && yolo export model=yolov8n.pt format=saved_model"
 }

@@ -499,6 +499,14 @@ class YOLOMultiLabel(YOLO):
 class YOLOValidation:
     """A class which provides assorted validation functions."""
 
+    # Needed for type checking "ultralytics.utils.metrics.DetMetrics"
+    # without causing multiple versions of ultralytics to be imported
+    # at runtime.
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        import ultralytics
+
     def __init__(
         self,
         model: YOLO,
