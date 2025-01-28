@@ -4,8 +4,6 @@ import pytest
 
 from seegull import YOLO, format_yolo_training_data
 
-import tensorflow as tf
-
 
 def test_format_yolo_training_data(annotation_df):
     output_path = Path("/tmp/yolo_training_data")
