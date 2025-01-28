@@ -1278,12 +1278,12 @@ def get_custom_tf_signature(
         raw_predictions = y[0]
         return raw_predictions
     
-    input_signature = default_signature.structured_input_signature
-    input_spec = list(input_signature[1].values())[0]
+    #input_signature = default_signature.structured_input_signature
+    #input_spec = list(input_signature[1].values())[0]
     #default_signature.inputs[0].shape,
     uint8_signature = image_uint8.get_concrete_function(
         image_bytes=tf.TensorSpec(
-            input_spec.shape,
+            shape=(640, 640, 3),  # Assuming model_shape is (640, 640)
             dtype=tf.uint8,
             name="image_bytes"
         )
