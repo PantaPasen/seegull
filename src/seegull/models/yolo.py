@@ -137,7 +137,7 @@ class YOLO:
         print("Adding custom signatures to tf model.")
         tf_model = tf.saved_model.load(tf_path)
 
-        default_signature = tf_model.signatures["serving_default"]
+        default_signature = tf_model
         uint8_signature, prediction_signature = self.get_custom_tf_signature(
             default_signature, dino_model, self.calibration
         )
@@ -1275,6 +1275,7 @@ def get_custom_tf_signature(
 
         # Prediction
         y = default_signature(tf_img)
+        tf.print("Default Signature Output:", y)
         raw_predictions = y[0]
         return raw_predictions
     

@@ -53,7 +53,6 @@ def test_call_default_yolo(im, yolov8n):
 def test_export_tf(yolov8n):
     yolov8n.export_tf_with_custom_signature()
 
-
 def test_validate_yolo(yolov8n, annotation_df):
     val = yolov8n.validate(df=annotation_df, split=None, target="object")
     val.metrics_per_class()
